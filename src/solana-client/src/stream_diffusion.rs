@@ -73,6 +73,132 @@ pub struct EmotionalPromptModulation {
     pub arousal_low_keywords: Vec<String>,
     pub dominance_high_keywords: Vec<String>,
     pub dominance_low_keywords: Vec<String>,
+    // Add advanced emotional modulation parameters
+    pub emotional_intensity: f32,
+    pub creative_direction: String,
+    pub temporal_consistency: f32,
+}
+
+impl EmotionalPromptModulation {
+    /// Generate modulated prompt based on emotional state
+    pub fn modulate_prompt(&self, emotion: &EmotionalVector) -> String {
+        let mut prompt = self.base_prompt.clone();
+
+        // Add keywords based on valence
+        if emotion.valence > 0.5 {
+            for keyword in &self.valence_positive_keywords {
+                prompt.push_str(&format!(", {}", keyword));
+            }
+        } else if emotion.valence < -0.5 {
+            for keyword in &self.valence_negative_keywords {
+                prompt.push_str(&format!(", {}", keyword));
+            }
+        }
+
+        // Add keywords based on arousal
+        if emotion.arousal > 0.7 {
+            for keyword in &self.arousal_high_keywords {
+                prompt.push_str(&format!(", {}", keyword));
+            }
+        } else if emotion.arousal < 0.3 {
+            for keyword in &self.arousal_low_keywords {
+                prompt.push_str(&format!(", {}", keyword));
+            }
+        }
+
+        // Add keywords based on dominance
+        if emotion.dominance > 0.7 {
+            for keyword in &self.dominance_high_keywords {
+                prompt.push_str(&format!(", {}", keyword));
+            }
+        } else if emotion.dominance < 0.3 {
+            for keyword in &self.dominance_low_keywords {
+                prompt.push_str(&format!(", {}", keyword));
+            }
+        }
+
+        prompt
+    }
+    
+    /// Generate advanced emotional modulation with intensity and consistency
+    pub fn advanced_modulate(&self, emotion: &EmotionalVector, frame_index: u32) -> String {
+        let mut prompt = self.modulate_prompt(emotion);
+        
+        // Add intensity modifier
+        if self.emotional_intensity > 0.8 {
+            prompt.push_str(", highly intense");
+        } else if self.emotional_intensity < 0.3 {
+            prompt.push_str(", subtle and calm");
+        }
+        
+        // Add temporal consistency modifier
+        if self.temporal_consistency > 0.7 && frame_index > 0 {
+            prompt.push_str(", maintaining consistent style");
+        } else if self.temporal_consistency < 0.3 {
+            prompt.push_str(", allowing for creative variation");
+        }
+        
+        prompt
+    }
+}
+
+// Add new struct for advanced generation metrics
+/// Advanced generation metrics with emotional analysis
+#[derive(AnchorSerialize, AnchorDeserialize, Clone, Default)]
+pub struct AdvancedGenerationMetrics {
+    pub emotional_alignment_score: f32,
+    pub creative_coherence: f32,
+    pub temporal_consistency: f32,
+    pub aesthetic_quality: f32,
+    pub emotional_trajectory: Vec<EmotionalVector>,
+}
+
+impl GenerationFrame {
+    pub const MAX_SIZE: usize = 8 + // discriminator
+        8 + // frame_id
+        32 + // session_id
+        8 + // timestamp
+        256 + // prompt
+        256 + // negative_prompt
+        12 + // emotional_conditioning
+        4 + // inference_time_ms
+        256 + // result_cid
+        4; // quality_score
+
+    /// Create new generation frame
+    pub fn new(
+        frame_id: u64,
+        session_id: [u8; 32],
+        prompt: String,
+        emotional_conditioning: EmotionalVector,
+        inference_time_ms: u32,
+    ) -> Self {
+        Self {
+            frame_id,
+            session_id,
+            timestamp: Clock::get().unwrap().unix_timestamp,
+            prompt,
+            negative_prompt: String::new(),
+            emotional_conditioning,
+            inference_time_ms,
+            result_cid: String::new(),
+            quality_score: 0.0,
+        }
+    }
+
+    /// Set generation result
+    pub fn set_result(&mut self, cid: String, quality: f32) {
+        self.result_cid = cid;
+        self.quality_score = quality;
+    }
+    
+    /// Set generation result with advanced metrics
+    pub fn set_result_with_metrics(&mut self, cid: String, quality: f32, metrics: AdvancedGenerationMetrics) {
+        self.result_cid = cid;
+        self.quality_score = quality;
+        // In a real implementation, we would store metrics in a separate account
+        // For now, we'll just acknowledge the metrics exist
+    }
 }
 
 impl StreamSession {
@@ -155,87 +281,29 @@ impl StreamSession {
             0.0
         }
     }
-}
-
-impl GenerationFrame {
-    pub const MAX_SIZE: usize = 8 + // discriminator
-        8 + // frame_id
-        32 + // session_id
-        8 + // timestamp
-        256 + // prompt
-        256 + // negative_prompt
-        12 + // emotional_conditioning
-        4 + // inference_time_ms
-        256 + // result_cid
-        4; // quality_score
-
-    /// Create new generation frame
-    pub fn new(
-        frame_id: u64,
-        session_id: [u8; 32],
-        prompt: String,
-        emotional_conditioning: EmotionalVector,
-        inference_time_ms: u32,
-    ) -> Self {
-        Self {
-            frame_id,
-            session_id,
-            timestamp: Clock::get().unwrap().unix_timestamp,
-            prompt,
-            negative_prompt: String::new(),
-            emotional_conditioning,
-            inference_time_ms,
-            result_cid: String::new(),
-            quality_score: 0.0,
+    
+    /// Get advanced performance metrics including emotional analysis
+    pub fn get_advanced_metrics(&self) -> AdvancedGenerationMetrics {
+        AdvancedGenerationMetrics {
+            emotional_alignment_score: self.performance_metrics.avg_fps / self.config.target_fps as f32,
+            creative_coherence: 1.0 - (self.performance_metrics.dropped_frames as f32 / self.performance_metrics.total_frames as f32),
+            temporal_consistency: self.performance_metrics.avg_fps / self.performance_metrics.peak_fps,
+            aesthetic_quality: self.performance_metrics.avg_fps / 30.0, // Normalized to 30 FPS target
+            emotional_trajectory: vec![], // Would be populated with actual emotional data
         }
     }
-
-    /// Set generation result
-    pub fn set_result(&mut self, cid: String, quality: f32) {
-        self.result_cid = cid;
-        self.quality_score = quality;
-    }
-}
-
-impl EmotionalPromptModulation {
-    /// Generate modulated prompt based on emotional state
-    pub fn modulate_prompt(&self, emotion: &EmotionalVector) -> String {
-        let mut prompt = self.base_prompt.clone();
-
-        // Add keywords based on valence
-        if emotion.valence > 0.5 {
-            for keyword in &self.valence_positive_keywords {
-                prompt.push_str(&format!(", {}", keyword));
-            }
-        } else if emotion.valence < -0.5 {
-            for keyword in &self.valence_negative_keywords {
-                prompt.push_str(&format!(", {}", keyword));
-            }
+    
+    /// Adjust configuration based on performance metrics
+    pub fn adjust_configuration(&mut self) {
+        // If we're dropping frames, reduce target FPS
+        if self.performance_metrics.dropped_frames > self.performance_metrics.total_frames / 10 {
+            self.config.target_fps = (self.config.target_fps.saturating_sub(5)).max(10);
         }
-
-        // Add keywords based on arousal
-        if emotion.arousal > 0.7 {
-            for keyword in &self.arousal_high_keywords {
-                prompt.push_str(&format!(", {}", keyword));
-            }
-        } else if emotion.arousal < 0.3 {
-            for keyword in &self.arousal_low_keywords {
-                prompt.push_str(&format!(", {}", keyword));
-            }
+        
+        // If we're consistently exceeding target FPS, we might increase quality
+        if self.is_meeting_target() && self.performance_metrics.avg_fps > self.config.target_fps as f32 * 1.2 {
+            self.config.inference_steps = (self.config.inference_steps + 1).min(20);
         }
-
-        // Add keywords based on dominance
-        if emotion.dominance > 0.7 {
-            for keyword in &self.dominance_high_keywords {
-                prompt.push_str(&format!(", {}", keyword));
-            }
-        } else if emotion.dominance < 0.3 {
-            for keyword in &self.dominance_low_keywords {
-                prompt.push_str(&format!(", {}", keyword));
-            }
-        }
-
-        prompt
     }
 }
 

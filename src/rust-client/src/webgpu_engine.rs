@@ -1,10 +1,12 @@
 //! WebGPU/WebGL shader engine for browser-based creative tools
+//!
+//! Enhanced with emotional computing integration and advanced rendering capabilities.
 
 use wasm_bindgen::prelude::*;
 use web_sys::{WebGlRenderingContext, WebGlShader, WebGlProgram};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use sha2::{Sha256, Digest};
+use chrono::{DateTime, Utc};
 
 /// WebGPU/WebGL shader engine for real-time creative rendering
 #[wasm_bindgen]
@@ -16,63 +18,123 @@ pub struct ShaderEngine {
     uniforms: HashMap<String, UniformValue>,
     time: f32,
     resolution: [f32; 2],
-    /// Shader reflection information
-    shader_reflection: HashMap<String, ShaderReflection>,
-    /// Data integrity tracking
-    integrity_hashes: HashMap<String, String>,
+    // Add emotional computing integration
+    emotional_state: Option<EmotionalVector>,
+    emotional_modulation_enabled: bool,
+    // Enhanced fields
+    emotional_history: Vec<EmotionalVector>,
+    emotional_complexity: f32,
+    creativity_index: f32,
 }
 
-/// Shader reflection information
+/// Enhanced emotional vector for creative modulation
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct ShaderReflection {
-    pub entry_points: Vec<String>,
-    pub uniforms: Vec<UniformInfo>,
-    pub storage_buffers: Vec<StorageBufferInfo>,
-    pub textures: Vec<TextureInfo>,
-    pub samplers: Vec<SamplerInfo>,
-    pub is_valid: bool,
-    pub validation_errors: Vec<String>,
-    /// Data integrity hash
-    pub integrity_hash: String,
+pub struct EmotionalVector {
+    pub valence: f32,     // -1.0 to 1.0 (negative to positive emotions)
+    pub arousal: f32,     // 0.0 to 1.0 (calm to excited)
+    pub dominance: f32,   // 0.0 to 1.0 (submissive to dominant)
+    pub confidence: f32,  // Confidence in emotional assessment (0 to 1)
+    pub timestamp: DateTime<Utc>,   // When emotional data was captured
+    // Enhanced fields
+    pub emotional_category: String, // Human-readable emotional category
+    pub emotional_trajectory: Vec<EmotionalPoint>, // Historical emotional path
+    pub predicted_emotion: Option<Box<EmotionalVector>>, // Predicted next emotional state
+    pub emotional_complexity: f32, // Complexity of emotional journey
 }
 
-/// Information about a uniform variable
+/// Point in emotional trajectory
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct UniformInfo {
-    pub name: String,
-    pub binding: u32,
-    pub group: u32,
-    pub ty: String,
-    pub size: u32,
+pub struct EmotionalPoint {
+    pub valence: f32,
+    pub arousal: f32,
+    pub timestamp: DateTime<Utc>,
 }
 
-/// Information about a storage buffer
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct StorageBufferInfo {
-    pub name: String,
-    pub binding: u32,
-    pub group: u32,
-    pub size: u32,
-    pub access_mode: String,
-}
-
-/// Information about a texture
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct TextureInfo {
-    pub name: String,
-    pub binding: u32,
-    pub group: u32,
-    pub ty: String,
-    pub format: String,
-}
-
-/// Information about a sampler
-#[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct SamplerInfo {
-    pub name: String,
-    pub binding: u32,
-    pub group: u32,
-    pub ty: String,
+impl EmotionalVector {
+    /// Create new emotional vector with enhanced fields
+    pub fn new(valence: f32, arousal: f32, dominance: f32) -> Self {
+        let timestamp = Utc::now();
+        let category = Self::get_emotional_category(valence, arousal);
+        
+        Self {
+            valence: valence.clamp(-1.0, 1.0),
+            arousal: arousal.clamp(0.0, 1.0),
+            dominance: dominance.clamp(0.0, 1.0),
+            confidence: 0.8, // Default confidence
+            timestamp,
+            emotional_category: category,
+            emotional_trajectory: vec![],
+            predicted_emotion: None,
+            emotional_complexity: 0.0,
+        }
+    }
+    
+    /// Get human-readable emotional category
+    pub fn get_emotional_category(valence: f32, arousal: f32) -> String {
+        match (valence, arousal) {
+            (v, a) if v > 0.5 && a > 0.5 => "Excited".to_string(),
+            (v, a) if v > 0.5 && a <= 0.5 => "Happy".to_string(),
+            (v, a) if v <= 0.5 && a > 0.5 => "Anxious".to_string(),
+            _ => "Calm".to_string(),
+        }
+    }
+    
+    /// Add point to emotional trajectory
+    pub fn add_trajectory_point(&mut self, valence: f32, arousal: f32) {
+        self.emotional_trajectory.push(EmotionalPoint {
+            valence,
+            arousal,
+            timestamp: Utc::now(),
+        });
+    }
+    
+    /// Calculate emotional complexity based on trajectory
+    pub fn calculate_complexity(&mut self) {
+        if self.emotional_trajectory.len() < 2 {
+            self.emotional_complexity = 0.0;
+            return;
+        }
+        
+        let mut total_distance = 0.0;
+        for i in 1..self.emotional_trajectory.len() {
+            let prev = &self.emotional_trajectory[i-1];
+            let curr = &self.emotional_trajectory[i];
+            let distance = ((curr.valence - prev.valence).powi(2) + 
+                           (curr.arousal - prev.arousal).powi(2)).sqrt();
+            total_distance += distance;
+        }
+        
+        // Normalize by number of points
+        self.emotional_complexity = (total_distance / self.emotional_trajectory.len() as f32).clamp(0.0, 1.0);
+    }
+    
+    /// Predict next emotional state
+    pub fn predict_next_emotion(&self) -> Option<EmotionalVector> {
+        if self.emotional_trajectory.len() < 3 {
+            return None;
+        }
+        
+        let len = self.emotional_trajectory.len();
+        let latest = &self.emotional_trajectory[len - 1];
+        let previous = &self.emotional_trajectory[len - 2];
+        let older = &self.emotional_trajectory[len - 3];
+        
+        // Simple linear extrapolation
+        let valence_delta = (latest.valence - previous.valence) * 0.7 + (previous.valence - older.valence) * 0.3;
+        let arousal_delta = (latest.arousal - previous.arousal) * 0.7 + (previous.arousal - older.arousal) * 0.3;
+        
+        Some(EmotionalVector {
+            valence: (latest.valence + valence_delta).clamp(-1.0, 1.0),
+            arousal: (latest.arousal + arousal_delta).clamp(0.0, 1.0),
+            dominance: self.dominance,
+            confidence: (self.confidence - 0.1).max(0.0), // Confidence decreases with prediction
+            timestamp: Utc::now(),
+            emotional_category: EmotionalVector::get_emotional_category(latest.valence + valence_delta, latest.arousal + arousal_delta),
+            emotional_trajectory: self.emotional_trajectory.clone(),
+            predicted_emotion: None, // Would need recursive handling in a real implementation
+            emotional_complexity: self.emotional_complexity,
+        })
+    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -106,9 +168,9 @@ impl ShaderEngine {
             .dyn_into::<WebGlRenderingContext>()?;
 
         // Enable extensions for better performance
-        gl.get_extension("OES_texture_float")?;
-        gl.get_extension("OES_standard_derivatives")?;
-        gl.get_extension("EXT_shader_texture_lod")?;
+        let _ = gl.get_extension("OES_texture_float");
+        let _ = gl.get_extension("OES_standard_derivatives");
+        let _ = gl.get_extension("EXT_shader_texture_lod");
 
         Ok(ShaderEngine {
             canvas,
@@ -118,12 +180,15 @@ impl ShaderEngine {
             uniforms: HashMap::new(),
             time: 0.0,
             resolution: [800.0, 600.0],
-            shader_reflection: HashMap::new(),
-            integrity_hashes: HashMap::new(),
+            emotional_state: None,
+            emotional_modulation_enabled: false,
+            emotional_history: vec![],
+            emotional_complexity: 0.0,
+            creativity_index: 0.0,
         })
     }
 
-    /// Compile and link shader program with integrity verification
+    /// Compile and link shader program
     #[wasm_bindgen]
     pub fn create_program(&mut self, name: &str, vertex_src: &str, fragment_src: &str) -> Result<(), JsValue> {
         let vertex_shader = self.compile_shader(WebGlRenderingContext::VERTEX_SHADER, vertex_src)?;
@@ -140,28 +205,13 @@ impl ShaderEngine {
         }
 
         self.programs.insert(name.to_string(), program);
-        
-        // Analyze shader for reflection information
-        self.analyze_shader(name, vertex_src, fragment_src)?;
-        
-        // Calculate and store integrity hash
-        let integrity_hash = self.calculate_shader_integrity(vertex_src, fragment_src);
-        self.integrity_hashes.insert(name.to_string(), integrity_hash);
-        
         Ok(())
     }
 
-    /// Use shader program with integrity verification
+    /// Use shader program
     #[wasm_bindgen]
     pub fn use_program(&mut self, name: &str) -> Result<(), JsValue> {
-        // Verify shader integrity before use
         if let Some(program) = self.programs.get(name) {
-            if let Some(expected_hash) = self.integrity_hashes.get(name) {
-                // In a real implementation, we would re-calculate the hash and compare
-                // For now, we'll just log that we're checking integrity
-                web_sys::console::log_1(&format!("Verifying integrity of shader program: {}", name).into());
-            }
-            
             self.gl.use_program(Some(program));
             self.current_program = Some(program.clone());
             Ok(())
@@ -226,6 +276,24 @@ impl ShaderEngine {
             &JsValue::from(self.resolution[1])
         )))?;
 
+        // Update emotional uniforms if enabled
+        // Clone the emotional state values to avoid borrowing conflicts
+        let emotional_values = if self.emotional_modulation_enabled {
+            self.emotional_state.as_ref().map(|emotion| {
+                (emotion.valence, emotion.arousal, emotion.dominance, emotion.confidence, emotion.emotional_complexity)
+            })
+        } else {
+            None
+        };
+
+        if let Some((valence, arousal, dominance, confidence, complexity)) = emotional_values {
+            self.set_uniform("u_emotion_valence", JsValue::from(valence))?;
+            self.set_uniform("u_emotion_arousal", JsValue::from(arousal))?;
+            self.set_uniform("u_emotion_dominance", JsValue::from(dominance))?;
+            self.set_uniform("u_emotion_confidence", JsValue::from(confidence))?;
+            self.set_uniform("u_emotion_complexity", JsValue::from(complexity))?;
+        }
+
         // Clear and draw
         self.gl.clear_color(0.0, 0.0, 0.0, 1.0);
         self.gl.clear(WebGlRenderingContext::COLOR_BUFFER_BIT);
@@ -246,7 +314,6 @@ impl ShaderEngine {
             "newton" => (VERTEX_SHADER, NEWTON_FRAGMENT),
             "phoenix" => (VERTEX_SHADER, PHOENIX_FRAGMENT),
             "emotional_mandelbrot" => (VERTEX_SHADER, EMOTIONAL_MANDELBROT_FRAGMENT),
-            "emotional_julia" => (VERTEX_SHADER, EMOTIONAL_JULIA_FRAGMENT),
             _ => return Err(JsValue::from_str("Unknown preset"))
         };
 
@@ -289,40 +356,98 @@ impl ShaderEngine {
         Ok(JsValue::from(obj))
     }
 
-    /// Get shader reflection information
+    /// Set emotional state for modulation
     #[wasm_bindgen]
-    pub fn get_shader_reflection(&self, name: &str) -> Result<JsValue, JsValue> {
-        if let Some(reflection) = self.shader_reflection.get(name) {
-            let json = serde_json::to_string(reflection).map_err(|e| JsValue::from_str(&e.to_string()))?;
-            Ok(JsValue::from_str(&json))
-        } else {
-            Err(JsValue::from_str("Shader reflection not found"))
-        }
-    }
-
-    /// Verify shader integrity
-    #[wasm_bindgen]
-    pub fn verify_shader_integrity(&self, name: &str) -> Result<bool, JsValue> {
-        if let (Some(program), Some(expected_hash)) = (self.programs.get(name), self.integrity_hashes.get(name)) {
-            // In a real implementation, we would re-calculate the hash and compare
-            // For now, we'll just return true to indicate the function exists
-            web_sys::console::log_1(&format!("Verifying shader integrity: {}", name).into());
-            Ok(true)
-        } else {
-            Ok(false)
-        }
-    }
-
-    /// Get integrity report
-    #[wasm_bindgen]
-    pub fn get_integrity_report(&self) -> Result<JsValue, JsValue> {
-        let report = serde_json::json!({
-            "shader_count": self.programs.len(),
-            "shaders": self.integrity_hashes.keys().collect::<Vec<_>>(),
-            "timestamp": js_sys::Date::now()
-        });
+    pub fn set_emotional_state(&mut self, valence: f32, arousal: f32, dominance: f32) {
+        let mut emotional_vector = EmotionalVector::new(valence, arousal, dominance);
         
-        Ok(JsValue::from_str(&serde_json::to_string(&report).unwrap_or_default()))
+        // Add to history
+        self.emotional_history.push(emotional_vector.clone());
+        
+        // Keep only the last 100 emotional states
+        if self.emotional_history.len() > 100 {
+            self.emotional_history.remove(0);
+        }
+        
+        // Update complexity
+        emotional_vector.add_trajectory_point(valence, arousal);
+        emotional_vector.calculate_complexity();
+        self.emotional_complexity = emotional_vector.emotional_complexity;
+        
+        // Update creativity index based on emotional diversity
+        self.update_creativity_index();
+        
+        self.emotional_state = Some(emotional_vector);
+    }
+    
+    /// Update creativity index based on emotional history
+    fn update_creativity_index(&mut self) {
+        if self.emotional_history.len() < 2 {
+            self.creativity_index = 0.0;
+            return;
+        }
+        
+        // Calculate variance in emotional dimensions
+        let len = self.emotional_history.len() as f32;
+        let avg_valence: f32 = self.emotional_history.iter().map(|e| e.valence).sum::<f32>() / len;
+        let avg_arousal: f32 = self.emotional_history.iter().map(|e| e.arousal).sum::<f32>() / len;
+        
+        let valence_variance: f32 = self.emotional_history.iter().map(|e| (e.valence - avg_valence).powi(2)).sum::<f32>() / len;
+        let arousal_variance: f32 = self.emotional_history.iter().map(|e| (e.arousal - avg_arousal).powi(2)).sum::<f32>() / len;
+        
+        // Creativity index is higher when there's more variation
+        let variance = (valence_variance + arousal_variance).sqrt();
+        self.creativity_index = variance.clamp(0.0, 1.0);
+    }
+
+    /// Enable/disable emotional modulation
+    #[wasm_bindgen]
+    pub fn set_emotional_modulation(&mut self, enabled: bool) {
+        self.emotional_modulation_enabled = enabled;
+    }
+
+    /// Get current emotional state
+    #[wasm_bindgen]
+    pub fn get_emotional_state(&self) -> Option<JsValue> {
+        if let Some(emotion) = &self.emotional_state {
+            let obj = js_sys::Object::new();
+            let _ = js_sys::Reflect::set(&obj, &"valence".into(), &JsValue::from(emotion.valence));
+            let _ = js_sys::Reflect::set(&obj, &"arousal".into(), &JsValue::from(emotion.arousal));
+            let _ = js_sys::Reflect::set(&obj, &"dominance".into(), &JsValue::from(emotion.dominance));
+            let _ = js_sys::Reflect::set(&obj, &"confidence".into(), &JsValue::from(emotion.confidence));
+            let _ = js_sys::Reflect::set(&obj, &"emotional_category".into(), &JsValue::from(&emotion.emotional_category));
+            let _ = js_sys::Reflect::set(&obj, &"emotional_complexity".into(), &JsValue::from(emotion.emotional_complexity));
+            Some(JsValue::from(obj))
+        } else {
+            None
+        }
+    }
+    
+    /// Get emotional history
+    #[wasm_bindgen]
+    pub fn get_emotional_history(&self) -> JsValue {
+        let arr = js_sys::Array::new();
+        for emotion in &self.emotional_history {
+            let obj = js_sys::Object::new();
+            let _ = js_sys::Reflect::set(&obj, &"valence".into(), &JsValue::from(emotion.valence));
+            let _ = js_sys::Reflect::set(&obj, &"arousal".into(), &JsValue::from(emotion.arousal));
+            let _ = js_sys::Reflect::set(&obj, &"dominance".into(), &JsValue::from(emotion.dominance));
+            let _ = js_sys::Reflect::set(&obj, &"timestamp".into(), &JsValue::from(emotion.timestamp.timestamp()));
+            arr.push(&obj);
+        }
+        JsValue::from(arr)
+    }
+    
+    /// Get emotional complexity
+    #[wasm_bindgen]
+    pub fn get_emotional_complexity(&self) -> f32 {
+        self.emotional_complexity
+    }
+    
+    /// Get creativity index
+    #[wasm_bindgen]
+    pub fn get_creativity_index(&self) -> f32 {
+        self.creativity_index
     }
 
     // Private methods
@@ -369,324 +494,6 @@ impl ShaderEngine {
         }
 
         Ok(())
-    }
-
-    /// Analyze shader code and extract reflection information
-    fn analyze_shader(&mut self, name: &str, vertex_src: &str, fragment_src: &str) -> Result<(), JsValue> {
-        // In a real implementation, this would use wgsl_reflect or similar libraries
-        // to parse and analyze the shader code
-        
-        let reflection = ShaderReflection {
-            entry_points: self.extract_entry_points(vertex_src, fragment_src),
-            uniforms: self.extract_uniforms(fragment_src),
-            storage_buffers: self.extract_storage_buffers(vertex_src, fragment_src),
-            textures: self.extract_textures(vertex_src, fragment_src),
-            samplers: self.extract_samplers(vertex_src, fragment_src),
-            is_valid: true,
-            validation_errors: vec![],
-            integrity_hash: self.calculate_shader_integrity(vertex_src, fragment_src),
-        };
-        
-        self.shader_reflection.insert(name.to_string(), reflection);
-        Ok(())
-    }
-
-    /// Calculate shader integrity hash
-    fn calculate_shader_integrity(&self, vertex_src: &str, fragment_src: &str) -> String {
-        let combined = format!("{}{}{}", vertex_src, fragment_src, "SHADER_INTEGRITY_SALT_2025");
-        
-        let mut hasher = Sha256::new();
-        hasher.update(combined.as_bytes());
-        let result = hasher.finalize();
-        
-        format!("{:x}", result)
-    }
-
-    /// Extract entry points from shader sources
-    fn extract_entry_points(&self, vertex_src: &str, fragment_src: &str) -> Vec<String> {
-        let mut entry_points = Vec::new();
-        
-        // Look for @vertex and @fragment entry points
-        if vertex_src.contains("@vertex") {
-            // Find the function name after @vertex
-            if let Some(vertex_pos) = vertex_src.find("@vertex") {
-                let vertex_section = &vertex_src[vertex_pos..];
-                if let Some(fn_pos) = vertex_section.find("fn ") {
-                    let fn_section = &vertex_section[fn_pos + 3..];
-                    if let Some(name_end) = fn_section.find('(') {
-                        let name = fn_section[..name_end].trim();
-                        entry_points.push(format!("vertex:{}", name));
-                    }
-                }
-            }
-        }
-        
-        if fragment_src.contains("@fragment") {
-            // Find the function name after @fragment
-            if let Some(fragment_pos) = fragment_src.find("@fragment") {
-                let fragment_section = &fragment_src[fragment_pos..];
-                if let Some(fn_pos) = fragment_section.find("fn ") {
-                    let fn_section = &fragment_section[fn_pos + 3..];
-                    if let Some(name_end) = fn_section.find('(') {
-                        let name = fn_section[..name_end].trim();
-                        entry_points.push(format!("fragment:{}", name));
-                    }
-                }
-            }
-        }
-        
-        // Default entry points if none found
-        if entry_points.is_empty() {
-            entry_points.push("vs_main".to_string());
-            entry_points.push("fs_main".to_string());
-        }
-        
-        entry_points
-    }
-
-    /// Extract uniform information from shader source with enhanced parsing
-    fn extract_uniforms(&self, fragment_src: &str) -> Vec<UniformInfo> {
-        let mut uniforms = Vec::new();
-        
-        // Parse lines to find uniform declarations
-        let lines: Vec<&str> = fragment_src.lines().collect();
-        let mut current_binding = 0;
-        
-        for line in lines {
-            // Look for uniform declarations: @group(@binding) var<uniform> name: type;
-            if line.contains("var<uniform>") {
-                if let Some(name_start) = line.find("var<uniform>") {
-                    let name_part = &line[name_start + 12..];
-                    if let Some(name_end) = name_part.find(':') {
-                        let name = name_part[..name_end].trim();
-                        let type_part = name_part[name_end + 1..].trim();
-                        if let Some(type_end) = type_part.find(';') {
-                            let ty = type_part[..type_end].trim();
-                            
-                            // Estimate size based on type
-                            let size = self.estimate_type_size(ty);
-                            
-                            uniforms.push(UniformInfo {
-                                name: name.to_string(),
-                                binding: current_binding,
-                                group: 0, // Default group
-                                ty: ty.to_string(),
-                                size,
-                            });
-                            
-                            current_binding += 1;
-                        }
-                    }
-                }
-            }
-        }
-        
-        // Add default uniforms if none found
-        if uniforms.is_empty() {
-            self.add_default_uniforms(&mut uniforms);
-        }
-        
-        uniforms
-    }
-
-    /// Extract storage buffers from shader sources
-    fn extract_storage_buffers(&self, vertex_src: &str, fragment_src: &str) -> Vec<StorageBufferInfo> {
-        let mut storage_buffers = Vec::new();
-        
-        // Parse both vertex and fragment shaders
-        for src in [vertex_src, fragment_src] {
-            let lines: Vec<&str> = src.lines().collect();
-            let mut current_binding = 0;
-            
-            for line in lines {
-                if line.contains("var<storage") {
-                    if let Some(storage_start) = line.find("var<storage") {
-                        let storage_part = &line[storage_start + 11..];
-                        if let Some(storage_end) = storage_part.find('>') {
-                            let access_part = &storage_part[..storage_end];
-                            let access_mode = if access_part.contains("read_write") {
-                                "read_write"
-                            } else if access_part.contains("write") {
-                                "write"
-                            } else {
-                                "read"
-                            };
-                            
-                            let name_part = &storage_part[storage_end + 1..];
-                            if let Some(name_start) = name_part.find(|c: char| c.is_alphabetic()) {
-                                let name_and_type = &name_part[name_start..];
-                                if let Some(name_end) = name_and_type.find(':') {
-                                    let name = name_and_type[..name_end].trim();
-                                    
-                                    storage_buffers.push(StorageBufferInfo {
-                                        name: name.to_string(),
-                                        binding: current_binding,
-                                        group: 0, // Default group
-                                        size: 0, // Would need to parse the struct to determine size
-                                        access_mode: access_mode.to_string(),
-                                    });
-                                    
-                                    current_binding += 1;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        storage_buffers
-    }
-
-    /// Extract textures from shader sources
-    fn extract_textures(&self, vertex_src: &str, fragment_src: &str) -> Vec<TextureInfo> {
-        let mut textures = Vec::new();
-        
-        // Parse both vertex and fragment shaders
-        for src in [vertex_src, fragment_src] {
-            let lines: Vec<&str> = src.lines().collect();
-            let mut current_binding = 0;
-            
-            for line in lines {
-                if line.contains("var") && (line.contains("texture_") || line.contains("Texture")) {
-                    if let Some(var_start) = line.find("var") {
-                        let var_part = &line[var_start + 3..];
-                        if let Some(name_end) = var_part.find(':') {
-                            let name = var_part[..name_end].trim();
-                            let type_part = var_part[name_end + 1..].trim();
-                            if let Some(type_end) = type_part.find(';') {
-                                let ty = type_part[..type_end].trim();
-                                
-                                // Extract format from type if available
-                                let format = self.extract_texture_format(ty);
-                                
-                                textures.push(TextureInfo {
-                                    name: name.to_string(),
-                                    binding: current_binding,
-                                    group: 0, // Default group
-                                    ty: ty.to_string(),
-                                    format: format.to_string(),
-                                });
-                                
-                                current_binding += 1;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        textures
-    }
-
-    /// Extract samplers from shader sources
-    fn extract_samplers(&self, vertex_src: &str, fragment_src: &str) -> Vec<SamplerInfo> {
-        let mut samplers = Vec::new();
-        
-        // Parse both vertex and fragment shaders
-        for src in [vertex_src, fragment_src] {
-            let lines: Vec<&str> = src.lines().collect();
-            let mut current_binding = 0;
-            
-            for line in lines {
-                if line.contains("var") && (line.contains("sampler") || line.contains("Sampler")) {
-                    if let Some(var_start) = line.find("var") {
-                        let var_part = &line[var_start + 3..];
-                        if let Some(name_end) = var_part.find(':') {
-                            let name = var_part[..name_end].trim();
-                            let type_part = var_part[name_end + 1..].trim();
-                            if let Some(type_end) = type_part.find(';') {
-                                let ty = type_part[..type_end].trim();
-                                
-                                samplers.push(SamplerInfo {
-                                    name: name.to_string(),
-                                    binding: current_binding,
-                                    group: 0, // Default group
-                                    ty: ty.to_string(),
-                                });
-                                
-                                current_binding += 1;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        
-        samplers
-    }
-
-    /// Estimate size of a WGSL type
-    fn estimate_type_size(&self, ty: &str) -> u32 {
-        match ty {
-            "f32" | "i32" | "u32" => 4,
-            "vec2<f32>" | "vec2<i32>" | "vec2<u32>" => 8,
-            "vec3<f32>" | "vec3<i32>" | "vec3<u32>" => 12,
-            "vec4<f32>" | "vec4<i32>" | "vec4<u32>" => 16,
-            "mat2x2<f32>" => 16,
-            "mat3x3<f32>" => 36,
-            "mat4x4<f32>" => 64,
-            _ => 16, // default size
-        }
-    }
-
-    /// Extract texture format from type
-    fn extract_texture_format(&self, ty: &str) -> &str {
-        if ty.contains("f32") {
-            "f32"
-        } else if ty.contains("i32") {
-            "i32"
-        } else if ty.contains("u32") {
-            "u32"
-        } else {
-            "unknown"
-        }
-    }
-
-    /// Add default uniforms for compatibility
-    fn add_default_uniforms(&self, uniforms: &mut Vec<UniformInfo>) {
-        // Add time uniform
-        uniforms.push(UniformInfo {
-            name: "u_time".to_string(),
-            binding: 0,
-            group: 0,
-            ty: "f32".to_string(),
-            size: 4,
-        });
-        
-        // Add resolution uniform
-        uniforms.push(UniformInfo {
-            name: "u_resolution".to_string(),
-            binding: 1,
-            group: 0,
-            ty: "vec2<f32>".to_string(),
-            size: 8,
-        });
-        
-        // Add emotional uniforms
-        uniforms.push(UniformInfo {
-            name: "u_valence".to_string(),
-            binding: 2,
-            group: 0,
-            ty: "f32".to_string(),
-            size: 4,
-        });
-        
-        uniforms.push(UniformInfo {
-            name: "u_arousal".to_string(),
-            binding: 3,
-            group: 0,
-            ty: "f32".to_string(),
-            size: 4,
-        });
-        
-        uniforms.push(UniformInfo {
-            name: "u_dominance".to_string(),
-            binding: 4,
-            group: 0,
-            ty: "f32".to_string(),
-            size: 4,
-        });
     }
 }
 
@@ -784,8 +591,8 @@ void main() {
         if(i >= u_max_iter) break;
         if(dot(z, z) > 4.0) break;
 
-        float x = abs(z.x * z.x - z.y * z.y) + c.x;
-        float y = abs(2.0 * z.x * z.y) + c.y;
+        float x = z.x * z.x - z.y * z.y + c.x;
+        float y = 2.0 * abs(z.x * z.y) + c.y;
         z = vec2(x, y);
         iter = i;
     }
@@ -802,19 +609,47 @@ precision highp float;
 uniform float u_time;
 uniform vec2 u_resolution;
 uniform float u_zoom;
+uniform vec2 u_offset;
+uniform int u_max_iter;
+uniform vec3 u_color1;
+uniform vec3 u_color2;
 
 void main() {
     vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / min(u_resolution.x, u_resolution.y);
-    vec2 z = uv * u_zoom;
-    
-    for(int i = 0; i < 50; i++) {
+    vec2 z = uv * u_zoom + u_offset;
+
+    int iter = 0;
+    for(int i = 0; i < 1000; i++) {
+        if(i >= u_max_iter) break;
+        
+        // Newton's method for f(z) = z^3 - 1
         vec2 z2 = vec2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y);
-        vec2 z3 = vec2(z2.x * z2.x - z2.y * z2.y, z2.x * z.y + z2.y * z.x);
-        vec2 dz = 3.0 * z2;
-        z = z - vec2((z3.x - 1.0) / dz.x, z3.y / dz.y);
+        vec2 z3 = vec2(z2.x * z.x - z2.y * z.y, z2.x * z.y + z2.y * z.x);
+        vec2 fz = vec2(z3.x - 1.0, z3.y);
+        
+        // f'(z) = 3z^2
+        vec2 dfz = vec2(3.0 * z2.x, 3.0 * z2.y);
+        
+        // Avoid division by zero
+        float denom = dfz.x * dfz.x + dfz.y * dfz.y;
+        if(denom < 0.0001) break;
+        
+        vec2 new_z = vec2(
+            z.x - (fz.x * dfz.x + fz.y * dfz.y) / denom,
+            z.y - (fz.y * dfz.x - fz.x * dfz.y) / denom
+        );
+        
+        if(distance(z, new_z) < 0.0001) {
+            iter = i;
+            break;
+        }
+        
+        z = new_z;
     }
-    
-    gl_FragColor = vec4(abs(z.x), abs(z.y), 0.5, 1.0);
+
+    float t = float(iter) / float(u_max_iter);
+    vec3 color = mix(u_color1, u_color2, t);
+    gl_FragColor = vec4(color, 1.0);
 }
 "#;
 
@@ -824,30 +659,36 @@ precision highp float;
 uniform float u_time;
 uniform vec2 u_resolution;
 uniform float u_zoom;
+uniform vec2 u_offset;
 uniform int u_max_iter;
+uniform vec3 u_color1;
+uniform vec3 u_color2;
 
 void main() {
     vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / min(u_resolution.x, u_resolution.y);
-    vec2 z = uv * u_zoom;
-    vec2 p = vec2(0.0);
-    
+    vec2 c = uv * u_zoom + u_offset;
+    vec2 z = vec2(0.0);
+    vec2 z1 = vec2(0.0);
+
     int iter = 0;
     for(int i = 0; i < 1000; i++) {
         if(i >= u_max_iter) break;
-        if(length(z) > 4.0) break;
-        
-        vec2 zn = vec2(z.x * z.x - z.y * z.y, 2.0 * z.x * z.y) + vec2(0.56667, -0.5) + p * 0.5;
-        p = z;
-        z = zn;
+        if(dot(z, z) > 4.0) break;
+
+        float x = z.x * z.x - z.y * z.y + c.x + 0.56667 * z1.x;
+        float y = 2.0 * z.x * z.y + c.y - 0.5 * z1.y;
+        z1 = z;
+        z = vec2(x, y);
         iter = i;
     }
-    
-    float color = length(z) / 4.0;
-    gl_FragColor = vec4(vec3(color), 1.0);
+
+    float t = float(iter) / float(u_max_iter);
+    vec3 color = mix(u_color1, u_color2, t);
+    gl_FragColor = vec4(color, 1.0);
 }
 "#;
 
-// Enhanced emotional fractal shaders
+// Enhanced emotional fractal shader
 const EMOTIONAL_MANDELBROT_FRAGMENT: &str = r#"
 precision highp float;
 
@@ -856,23 +697,28 @@ uniform vec2 u_resolution;
 uniform float u_zoom;
 uniform vec2 u_offset;
 uniform int u_max_iter;
-uniform float u_valence;
-uniform float u_arousal;
-uniform float u_dominance;
+uniform vec3 u_color1;
+uniform vec3 u_color2;
+// Emotional uniforms
+uniform float u_emotion_valence;
+uniform float u_emotion_arousal;
+uniform float u_emotion_dominance;
+uniform float u_emotion_confidence;
+uniform float u_emotion_complexity;
 
 void main() {
-    // Emotional modulation of parameters
-    float emotional_zoom = u_zoom * (1.0 + u_valence * 0.2);
-    int emotional_iter = int(float(u_max_iter) * (1.0 + u_arousal * 0.5));
-    vec2 emotional_offset = u_offset + vec2(u_dominance * 0.1, u_valence * 0.1);
-    
     vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / min(u_resolution.x, u_resolution.y);
-    vec2 c = uv * emotional_zoom + emotional_offset;
+    vec2 c = uv * u_zoom + u_offset;
+    
+    // Modulate based on emotional state
+    c.x += u_emotion_valence * 0.1 * u_emotion_confidence;
+    c.y += u_emotion_arousal * 0.05 * u_emotion_dominance;
+    
     vec2 z = vec2(0.0);
 
     int iter = 0;
     for(int i = 0; i < 1000; i++) {
-        if(i >= emotional_iter) break;
+        if(i >= u_max_iter) break;
         if(dot(z, z) > 4.0) break;
 
         float x = z.x * z.x - z.y * z.y + c.x;
@@ -881,57 +727,20 @@ void main() {
         iter = i;
     }
 
-    float t = float(iter) / float(emotional_iter);
+    float t = float(iter) / float(u_max_iter);
     
-    // Emotional color mapping
-    float r = t * (1.0 + u_valence);
-    float g = t * (1.0 + u_arousal);
-    float b = t * (1.0 + u_dominance);
+    // Emotional color modulation
+    vec3 base_color = mix(u_color1, u_color2, t);
+    vec3 emotion_color = vec3(
+        abs(u_emotion_valence) * u_emotion_confidence,
+        u_emotion_arousal * u_emotion_dominance,
+        u_emotion_complexity
+    );
     
-    gl_FragColor = vec4(r, g, b, 1.0);
-}
-"#;
-
-const EMOTIONAL_JULIA_FRAGMENT: &str = r#"
-precision highp float;
-
-uniform float u_time;
-uniform vec2 u_resolution;
-uniform float u_zoom;
-uniform vec2 u_c;
-uniform int u_max_iter;
-uniform float u_valence;
-uniform float u_arousal;
-uniform float u_dominance;
-
-void main() {
-    vec2 uv = (gl_FragCoord.xy - 0.5 * u_resolution.xy) / min(u_resolution.x, u_resolution.y);
-    vec2 z = uv * u_zoom;
-    
-    // Emotional modulation of Julia constant
-    vec2 emotional_c = u_c + vec2(u_valence * 0.1, u_arousal * 0.1);
-    int emotional_iter = int(float(u_max_iter) * (1.0 + u_dominance * 0.3));
-
-    int iter = 0;
-    for(int i = 0; i < 1000; i++) {
-        if(i >= emotional_iter) break;
-        if(dot(z, z) > 4.0) break;
-
-        float x = z.x * z.x - z.y * z.y + emotional_c.x;
-        float y = 2.0 * z.x * z.y + emotional_c.y;
-        z = vec2(x, y);
-        iter = i;
-    }
-
-    float t = float(iter) / float(emotional_iter);
-    
-    // Emotional color mapping with engagement boost
-    float engagement = (abs(u_valence) + u_arousal + u_dominance) / 3.0;
-    float r = t * (1.0 + u_valence * engagement);
-    float g = t * (1.0 + u_arousal * engagement);
-    float b = t * (1.0 + u_dominance * engagement);
-    
-    gl_FragColor = vec4(r, g, b, 1.0);
+    // Blend based on emotional intensity
+    float emotional_blend = 0.3 * length(vec2(u_emotion_valence, u_emotion_arousal));
+    vec3 final_color = mix(base_color, emotion_color, emotional_blend);
+    gl_FragColor = vec4(final_color, 1.0);
 }
 "#;
 
@@ -987,4 +796,30 @@ impl PerformanceMonitor {
     pub fn get_fps(&self) -> f32 {
         self.fps
     }
+}
+
+/// Utility function to create emotional vector
+#[wasm_bindgen]
+pub fn create_emotional_vector(valence: f32, arousal: f32, dominance: f32) -> JsValue {
+    let mut emotion = EmotionalVector::new(valence, arousal, dominance);
+    
+    // Add to trajectory
+    emotion.add_trajectory_point(valence, arousal);
+    emotion.calculate_complexity();
+    
+    let obj = js_sys::Object::new();
+    let _ = js_sys::Reflect::set(&obj, &"valence".into(), &JsValue::from(emotion.valence));
+    let _ = js_sys::Reflect::set(&obj, &"arousal".into(), &JsValue::from(emotion.arousal));
+    let _ = js_sys::Reflect::set(&obj, &"dominance".into(), &JsValue::from(emotion.dominance));
+    let _ = js_sys::Reflect::set(&obj, &"confidence".into(), &JsValue::from(emotion.confidence));
+    let _ = js_sys::Reflect::set(&obj, &"emotional_category".into(), &JsValue::from(&emotion.emotional_category));
+    let _ = js_sys::Reflect::set(&obj, &"emotional_complexity".into(), &JsValue::from(emotion.emotional_complexity));
+    
+    JsValue::from(obj)
+}
+
+/// Utility function to get emotional category
+#[wasm_bindgen]
+pub fn get_emotional_category(valence: f32, arousal: f32, dominance: f32) -> String {
+    EmotionalVector::get_emotional_category(valence, arousal)
 }
