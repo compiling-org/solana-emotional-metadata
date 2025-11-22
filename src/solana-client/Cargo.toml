@@ -1,0 +1,17 @@
+[package]
+name = "solana-client"
+version = "0.1.0"
+edition = "2021"
+description = "Solana client for high-performance creative metadata storage"
+authors = ["Dr. Kapil Bambardekar <kapil.bambardekar@gmail.com>", "Grigori Korotkikh <vdmo@gmail.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/compiling-org/nft-blockchain-interactive"
+homepage = "https://compiling-org.netlify.app"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+anchor-lang = "0.29.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
