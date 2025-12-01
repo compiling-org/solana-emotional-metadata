@@ -1,0 +1,67 @@
+[package]
+name = "nft-blockchain-interactive"
+version = "0.1.0"
+edition = "2021"
+description = "Multi-chain framework for generating real-time creative data and persisting/tokenizing on decentralized networks"
+authors = ["Dr. Kapil Bambardekar <kapil.bambardekar@gmail.com>", "Grigori Korotkikh <vdmo@gmail.com>"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/compiling-org/nft-blockchain-interactive"
+homepage = "https://compiling-org.netlify.app"
+keywords = ["blockchain", "nft", "creative-computing", "decentralized-storage", "real-time"]
+categories = ["cryptography", "web-programming", "api-bindings", "multimedia", "game-development"]
+
+[workspace]
+members = [
+    "src/rust-client",
+    "src/ipfs-integration",
+    "src/polkadot-client",
+    # "contracts/near/soulbound-nft", # Requires cargo-near, exclude for now
+]
+exclude = [
+    "src/near-wasm",
+    "src/solana-client",
+    "src/marketplace",
+    "src/wasm-fractal",
+]
+
+[dependencies]
+# Core creative data processing
+anyhow = "1.0"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.0", features = ["full"] }
+chrono = { version = "0.4", features = ["serde"] }
+uuid = { version = "1.0", features = ["v4", "serde"] }
+
+# Web and graphics
+wgpu = "0.19"
+wasm-bindgen = "0.2"
+js-sys = "0.3"
+web-sys = "0.3"
+
+# IPFS and storage
+cid = "0.10"
+multihash = "0.19"
+ipfs-api = "0.15"
+
+# Polkadot/Substrate
+subxt = "0.28"
+
+[features]
+default = ["rust-client"]
+rust-client = []
+ipfs-integration = []
+near-wasm = []
+solana-client = []
+polkadot-client = []
+marketplace = []
+
+[profile.release]
+overflow-checks = true
+lto = "fat"
+codegen-units = 1
+
+[profile.dev]
+overflow-checks = true
+

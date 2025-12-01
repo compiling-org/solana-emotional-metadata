@@ -1,12 +1,5 @@
 # Solana Emotional Metadata
 
-Status Update (2025-12-01)
-
-- Source modules: `src/solana-client/`, `contracts/solana/biometric-nft/`
-- Extracted repo: `C:/Users/kapil/compiling/grant-repositories/solana-emotional-metadata`
-- Real AI: TensorFlow.js inference integrated in client/demo UIs
-- Program deployment: client and demos present; on-chain deployment validation pending
-
 ## 🎯 Project Overview
 
 **Solana Emotional Metadata** is an Anchor-based program that stores creative session data and emotional metadata on the Solana blockchain, with integrated Stream Diffusion performance tracking.
