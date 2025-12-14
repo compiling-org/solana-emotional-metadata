@@ -24,6 +24,10 @@ class MockWallet implements Wallet {
   get publicKey(): PublicKey {
     return this.keypair.publicKey;
   }
+  
+  get payer(): Keypair {
+    return this.keypair;
+  }
 }
 
 /**
@@ -55,12 +59,12 @@ export class EnhancedSolanaIntegration {
           contractId: 'bio-nft-1764175259.sleeplessmonk-testnet-1764175172.testnet'
         },
         filecoin: {
-          endpoint: 'https://api.filecoin.io',
+          rpcUrl: 'https://api.filecoin.io',
           token: 'your-filecoin-token'
         },
         polkadot: {
-          network: 'rococo',
-          contract: 'your-polkadot-contract'
+          rpcUrl: 'https://rococo-rpc.polkadot.io',
+          parachainId: 2000
         }
       }
     );
@@ -77,8 +81,8 @@ export class EnhancedSolanaIntegration {
       await this.client.initializeModels();
       
       // Check connection
-      const health = await this.connection.getHealth();
-      console.log('✅ Solana connection health:', health);
+      const slot = await this.connection.getSlot();
+      console.log('✅ Connection slot:', slot);
       
       console.log('✅ Enhanced Solana Integration initialized successfully');
     } catch (error) {
@@ -249,7 +253,7 @@ export class EnhancedSolanaIntegration {
         valence: analysis.averageEmotion.valence.toFixed(3),
         arousal: analysis.averageEmotion.arousal.toFixed(3),
         dominance: analysis.averageEmotion.dominance.toFixed(3),
-        confidence: analysis.averageEmotion.confidence.toFixed(3)
+        confidence: (analysis.averageEmotion.confidence || 0).toFixed(3)
       });
       
       console.log('📊 Quality Distribution:', analysis.qualityDistribution);

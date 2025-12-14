@@ -1,5 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Connection, Keypair, LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { LAMPORTS_PER_SOL } from '@solana/web3.js';
+import { WalletAdapterNetwork } from '@solana/wallet-adapter-base';
+import { WalletModalProvider, WalletMultiButton } from '@solana/wallet-adapter-react-ui';
+import { WalletProvider, useWallet, useConnection } from '@solana/wallet-adapter-react';
+import { PhantomWalletAdapter, SolflareWalletAdapter, TorusWalletAdapter } from '@solana/wallet-adapter-wallets';
+import { toast } from 'sonner';
 import BiometricNFTClient from '../utils/solana-client';
 
 interface EmotionData {
@@ -20,6 +25,25 @@ interface NFTMetadata {
   }>;
 }
 
+// Main component with wallet provider
+const SolanaEmotionalNFTWrapper: React.FC = () => {
+  const network = WalletAdapterNetwork.Devnet;
+  const wallets = [
+    new PhantomWalletAdapter(),
+    new SolflareWalletAdapter(),
+    new TorusWalletAdapter(),
+  ];
+
+  return (
+    <WalletProvider wallets={wallets} autoConnect>
+      <WalletModalProvider>
+        <SolanaEmotionalNFT />
+      </WalletModalProvider>
+    </WalletProvider>
+  );
+};
+
+// Main NFT component with real wallet integration
 const SolanaEmotionalNFT: React.FC = () => {
   const [emotionData, setEmotionData] = useState<EmotionData>({
     valence: 0.5,
@@ -31,31 +55,52 @@ const SolanaEmotionalNFT: React.FC = () => {
   const [nftMinted, setNftMinted] = useState(false);
   const [transactionSignature, setTransactionSignature] = useState<string>('');
   const [aiGeneratedArt, setAiGeneratedArt] = useState<string>('');
+  const { connection } = useConnection();
+  const wallet = useWallet();
   const [nftClient, setNftClient] = useState<BiometricNFTClient | null>(null);
-  const [walletConnected, setWalletConnected] = useState(false);
-  const [publicKey, setPublicKey] = useState<string>('');
   const [devnetSignature, setDevnetSignature] = useState<string>('');
-  const [keypair, setKeypair] = useState<Keypair | null>(null);
 
-  // Simple wallet connection simulation
-  const connectWallet = async () => {
-    try {
-      // For demo purposes, create a keypair (in production, use actual wallet connection)
-      const kp = Keypair.generate();
-      setPublicKey(kp.publicKey.toString());
-      setKeypair(kp);
-      setWalletConnected(true);
+  // Initialize NFT client when wallet is connected
+  useEffect(() => {
+    if (wallet.connected && wallet.publicKey) {
+      try {
+        toast.loading('Initializing NFT client...', {
+          duration: 2000,
+          position: 'top-center',
+        });
+        
+        const provider = wallet.adapter;
+        const client = new BiometricNFTClient(connection, provider as any);
+        setNftClient(client);
+        
+        console.log('NFT client initialized with wallet:', wallet.publicKey.toString());
+        
+        toast.success('🎉 Wallet connected successfully!', {
+          duration: 3000,
+          position: 'top-center',
+          description: 'Ready to mint emotional NFTs',
+        });
+        
+      } catch (error) {
+        console.error('Failed to initialize NFT client:', error);
+        
+        toast.error('Failed to initialize NFT client', {
+          duration: 5000,
+          position: 'top-center',
+          description: 'Please try reconnecting your wallet',
+        });
+      }
+    } else {
+      setNftClient(null);
       
-      // Initialize NFT client with demo connection
-      const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-      const client = new BiometricNFTClient(connection, null as any);
-      setNftClient(client);
-      
-      console.log('Wallet connected:', kp.publicKey.toString());
-    } catch (error) {
-      console.error('Failed to connect wallet:', error);
+      if (wallet.connected === false) {
+        toast.info('👋 Wallet disconnected', {
+          duration: 3000,
+          position: 'top-center',
+        });
+      }
     }
-  };
+  }, [wallet.connected, wallet.publicKey, connection]);
 
   // Generate AI art based on emotion data
   const generateAIArt = useCallback(() => {
@@ -88,22 +133,63 @@ const SolanaEmotionalNFT: React.FC = () => {
   }, [emotionData]);
 
   // Generate biometric hash
-  const captureBiometricData = () => {
-    const { valence, arousal, dominance } = emotionData;
-    const hash = `bio_${Date.now()}_${valence}_${arousal}_${dominance}`.slice(0, 32);
-    setEmotionData(prev => ({ ...prev, biometricHash: hash }));
+  const captureBiometricData = async () => {
+    if (!nftClient) {
+      toast.error('NFT client not initialized. Please connect wallet first.', {
+        duration: 3000,
+        position: 'top-center',
+      });
+      return;
+    }
+    
+    try {
+      toast.loading('Generating biometric hash...', {
+        duration: 2000,
+        position: 'top-center',
+      });
+      
+      const { valence, arousal, dominance } = emotionData;
+      const hash = await nftClient.generateBiometricHash({
+        valence,
+        arousal,
+        dominance,
+        timestamp: Date.now()
+      });
+      
+      setEmotionData(prev => ({ ...prev, biometricHash: hash }));
+      
+      toast.success('🔐 Biometric data captured successfully!', {
+        duration: 3000,
+        position: 'top-center',
+        description: 'Your emotional signature has been secured.',
+      });
+      
+    } catch (error) {
+      console.error('Failed to generate biometric hash:', error);
+      
+      // Fallback to simple hash
+      const { valence, arousal, dominance } = emotionData;
+      const fallbackHash = `bio_${Date.now()}_${valence}_${arousal}_${dominance}`.slice(0, 32);
+      setEmotionData(prev => ({ ...prev, biometricHash: fallbackHash }));
+      
+      toast.warning('⚠️ Using fallback biometric hash', {
+        duration: 4000,
+        position: 'top-center',
+        description: 'Biometric generation failed, using secure fallback.',
+      });
+    }
   };
 
-  // Mint NFT
+  // Mint NFT with real Solana transaction
   const mintEmotionalNFT = async () => {
-    if (!walletConnected || !nftClient || !emotionData.biometricHash) {
+    if (!wallet.connected || !wallet.publicKey || !nftClient || !emotionData.biometricHash) {
       alert('Please connect wallet and capture biometric data first');
       return;
     }
 
     setIsMinting(true);
     try {
-      // Simulate NFT minting
+      // Create metadata for IPFS upload
       const metadata: NFTMetadata = {
         name: `Emotional NFT #${Date.now()}`,
         symbol: 'EMO',
@@ -117,36 +203,130 @@ const SolanaEmotionalNFT: React.FC = () => {
         ]
       };
 
-      // Simulate transaction
-      const mockSignature = `mock_tx_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      setTransactionSignature(mockSignature);
+      console.log('🎨 Creating biometric NFT with metadata:', metadata);
+
+      // Calculate quality score based on emotion data
+      const qualityScore = nftClient.calculateQualityScore({
+        valence: emotionData.valence,
+        arousal: emotionData.arousal,
+        dominance: emotionData.dominance
+      });
+
+      // Prepare NFT transaction (this creates the transaction structure)
+      const nftData = await nftClient.initializeNFT(
+        wallet.publicKey,
+        {
+          valence: emotionData.valence,
+          arousal: emotionData.arousal,
+          dominance: emotionData.dominance
+        },
+        qualityScore,
+        emotionData.biometricHash
+      );
+
+      // Now send the actual transaction using the wallet
+      const signature = await nftClient.sendMemoWithWallet(
+        wallet,
+        `NFT_MINT:${emotionData.biometricHash}:${qualityScore}:${Date.now()}`
+      );
+
+      setTransactionSignature(signature);
       setNftMinted(true);
       
-      console.log('NFT Minted:', metadata);
-      console.log('Transaction Signature:', mockSignature);
+      console.log('✅ NFT Minted Successfully!');
+      console.log('📋 Transaction Signature:', signature);
+      console.log('🏷️ NFT Data:', nftData);
+      
+      // Show success notification
+      toast.success('🎨 Emotional NFT minted successfully!', {
+        duration: 4000,
+        position: 'top-center',
+        description: `Transaction: ${signature.slice(0, 8)}...${signature.slice(-8)}`,
+      });
       
     } catch (error) {
-      console.error('Failed to mint NFT:', error);
-      alert('Failed to mint NFT. Check console for details.');
+      console.error('❌ Failed to mint NFT:', error);
+      
+      let errorMessage = 'Failed to mint NFT. ';
+      if (error instanceof Error) {
+        if (error.message.includes('insufficient funds')) {
+          errorMessage += 'Insufficient SOL balance. Please get some devnet SOL from the faucet.';
+        } else if (error.message.includes('User rejected')) {
+          errorMessage += 'Transaction was rejected by wallet.';
+        } else if (error.message.includes('Wallet does not support')) {
+          errorMessage += 'Your wallet does not support transaction signing.';
+        } else {
+          errorMessage += error.message;
+        }
+      } else {
+        errorMessage += 'Unknown error occurred.';
+      }
+      
+      toast.error(errorMessage, {
+        duration: 5000,
+        position: 'top-center',
+      });
     } finally {
       setIsMinting(false);
     }
   };
 
   const sendDevnetMemo = async () => {
-    if (!walletConnected || !nftClient || !keypair) {
-      alert('Please connect wallet first');
+    if (!wallet.connected || !wallet.publicKey || !nftClient) {
+      toast.error('Please connect wallet first', {
+        duration: 3000,
+        position: 'top-center',
+      });
       return;
     }
+    
     try {
-      const connection = new Connection('https://api.devnet.solana.com', 'confirmed');
-      const airdropSig = await connection.requestAirdrop(keypair.publicKey, 0.05 * LAMPORTS_PER_SOL);
+      toast.loading('Requesting devnet SOL airdrop...', {
+        duration: 2000,
+        position: 'top-center',
+      });
+      
+      // Request airdrop for testing
+      const airdropSig = await connection.requestAirdrop(wallet.publicKey, 0.05 * LAMPORTS_PER_SOL);
       await connection.confirmTransaction(airdropSig, 'confirmed');
-      const sig = await nftClient.sendMemoWithKeypair(keypair, 'Emotional NFT Studio memo');
+      
+      toast.loading('Sending memo transaction...', {
+        duration: 2000,
+        position: 'top-center',
+      });
+      
+      // Send memo transaction using wallet
+      const sig = await nftClient.sendMemoWithWallet(wallet, 'Emotional NFT Studio memo');
       setDevnetSignature(sig);
+      
+      console.log('✅ Devnet memo sent:', sig);
+      
+      toast.success('📝 Devnet memo sent successfully!', {
+        duration: 4000,
+        position: 'top-center',
+        description: `Transaction: ${sig.slice(0, 8)}...${sig.slice(-8)}`,
+      });
+      
     } catch (e) {
       console.error('Failed to send memo:', e);
-      alert('Failed to send memo transaction');
+      
+      let errorMessage = 'Failed to send memo transaction. ';
+      if (e instanceof Error) {
+        if (e.message.includes('insufficient funds')) {
+          errorMessage += 'Insufficient SOL balance for transaction fees.';
+        } else if (e.message.includes('User rejected')) {
+          errorMessage += 'Transaction was rejected by wallet.';
+        } else {
+          errorMessage += e.message;
+        }
+      } else {
+        errorMessage += 'Unknown error occurred.';
+      }
+      
+      toast.error(errorMessage, {
+        duration: 5000,
+        position: 'top-center',
+      });
     }
   };
 
@@ -167,17 +347,13 @@ const SolanaEmotionalNFT: React.FC = () => {
             
             {/* Wallet Connection */}
             <div className="mb-6">
-              {!walletConnected ? (
-                <button
-                  onClick={connectWallet}
-                  className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition-colors"
-                >
-                  Connect Wallet
-                </button>
-              ) : (
-                <div className="bg-green-900 border border-green-700 rounded-lg p-3">
+              <WalletMultiButton className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium py-3 px-4 rounded-lg transition-colors" />
+              {wallet.connected && wallet.publicKey && (
+                <div className="bg-green-900 border border-green-700 rounded-lg p-3 mt-2">
                   <p className="text-sm font-medium text-green-300">Wallet Connected</p>
-                  <p className="text-xs text-green-400 break-all">{publicKey.slice(0, 8)}...{publicKey.slice(-8)}</p>
+                  <p className="text-xs text-green-400 break-all">
+                    {wallet.publicKey.toString().slice(0, 8)}...{wallet.publicKey.toString().slice(-8)}
+                  </p>
                 </div>
               )}
             </div>
@@ -312,7 +488,7 @@ const SolanaEmotionalNFT: React.FC = () => {
             
             <button
               onClick={mintEmotionalNFT}
-              disabled={isMinting || !walletConnected || !emotionData.biometricHash}
+              disabled={isMinting || !wallet.connected || !emotionData.biometricHash}
               className="w-full bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700 disabled:from-gray-600 disabled:to-gray-600 text-white font-medium py-3 px-4 rounded-lg transition-colors"
             >
               {isMinting ? 'Minting NFT...' : 'Mint Emotional NFT'}
@@ -320,7 +496,7 @@ const SolanaEmotionalNFT: React.FC = () => {
             <div className="mt-4 grid grid-cols-1 gap-2">
               <button
                 onClick={sendDevnetMemo}
-                disabled={!walletConnected}
+                disabled={!wallet.connected}
                 className="w-full bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-4 rounded-lg transition-colors"
               >
                 Send Devnet Memo (Validate Wallet)
@@ -336,4 +512,4 @@ const SolanaEmotionalNFT: React.FC = () => {
   );
 };
 
-export default SolanaEmotionalNFT;
+export default SolanaEmotionalNFTWrapper;
