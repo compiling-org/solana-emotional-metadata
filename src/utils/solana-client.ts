@@ -1,6 +1,6 @@
 import { Connection, PublicKey, SystemProgram } from '@solana/web3.js';
 import { Program, AnchorProvider, web3, BN } from '@project-serum/anchor';
-import { createHash } from 'crypto';
+import { NFTStorage } from 'nft.storage';
 
 // IDL definition inline to avoid import issues
 const idl = {
@@ -278,15 +278,15 @@ export class BiometricNFTClient {
     return Math.min(qualityScore, 1.0); // Cap at 1.0
   }
 
-  // Generate biometric hash from emotion data using SHA-256
-  generateBiometricHash(emotionData: EmotionData): string {
-    // Create a deterministic hash from emotion data and timestamp
+  // Generate biometric hash from emotion data using browser WebCrypto
+  async generateBiometricHash(emotionData: EmotionData): Promise<string> {
     const dataString = `${emotionData.valence}-${emotionData.arousal}-${emotionData.dominance}-${Date.now()}`;
-    
-    // Use SHA-256 for cryptographic hash
-    const hash = createHash('sha256').update(dataString).digest('hex');
-    
-    return hash;
+    const encoder = new TextEncoder();
+    const data = encoder.encode(dataString);
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    const bytes = new Uint8Array(digest);
+    const hex = Array.from(bytes).map(b => b.toString(16).padStart(2, '0')).join('');
+    return hex;
   }
 
   // Upload metadata to Arweave/IPFS (mock implementation)
@@ -299,6 +299,52 @@ export class BiometricNFTClient {
     await new Promise(resolve => setTimeout(resolve, 1000));
     
     return `https://arweave.net/mock-transaction-${Date.now()}`;
+  }
+
+  // Send a memo transaction using the connected wallet
+  async sendMemoWithWallet(wallet: any, message: string): Promise<string> {
+    const memoProgramId = new PublicKey('MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr');
+    const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash();
+
+    const instruction = new web3.TransactionInstruction({
+      keys: [],
+      programId: memoProgramId,
+      data: (new TextEncoder().encode(message)) as unknown as Buffer,
+    });
+
+    const transaction = new web3.Transaction({
+      feePayer: wallet.publicKey,
+      recentBlockhash: blockhash,
+    }).add(instruction);
+
+    const signed = await wallet.signTransaction(transaction);
+    const sig = await this.connection.sendRawTransaction(signed.serialize());
+    await this.connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, 'confirmed');
+    return sig;
+  }
+
+  async sendSol(wallet: any, to: PublicKey, lamports: number): Promise<string> {
+    const { blockhash, lastValidBlockHeight } = await this.connection.getLatestBlockhash();
+    const ix = SystemProgram.transfer({
+      fromPubkey: wallet.publicKey,
+      toPubkey: to,
+      lamports,
+    });
+    const tx = new web3.Transaction({
+      feePayer: wallet.publicKey,
+      recentBlockhash: blockhash,
+    }).add(ix);
+    const signed = await wallet.signTransaction(tx);
+    const sig = await this.connection.sendRawTransaction(signed.serialize());
+    await this.connection.confirmTransaction({ signature: sig, blockhash, lastValidBlockHeight }, 'confirmed');
+    return sig;
+  }
+
+  async uploadMetadataNFTStorage(token: string, metadata: any): Promise<string> {
+    const client = new NFTStorage({ token });
+    const blob = new Blob([JSON.stringify(metadata)], { type: 'application/json' });
+    const cid = await client.storeBlob(blob);
+    return cid;
   }
 }
 
