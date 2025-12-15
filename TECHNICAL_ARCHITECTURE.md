@@ -1,6 +1,6 @@
-# Solana Emotional Metadata - Technical Architecture
+﻿# Solana Emotional Metadata - Technical Architecture
 
-## 🏗️ System Overview
+## ðŸ—ï¸ System Overview
 
 The Solana Emotional Metadata system uses Anchor framework to create on-chain accounts for storing creative session data, emotional states, and performance metrics with integrated Stream Diffusion tracking.
 
@@ -10,6 +10,7 @@ graph TB
         A[Anchor Client SDK]
         B[Wallet Adapter]
         C[Stream Diffusion Client]
+        S[Session Recorder]
     end
     
     subgraph "Solana Blockchain"
@@ -17,23 +18,28 @@ graph TB
         E[EmotionalMetadata Account]
         F[StreamDiffusionMetrics Account]
         G[CrossChainMetadata Account]
+        M[Memo Program]
     end
     
     subgraph "Off-chain Services"
         H[Compression Service]
         I[Bridge Service]
         J[Analytics Engine]
+        K[IPFS/Filecoin Session Storage]
     end
     
     A --> D
     A --> E
     C --> F
+    S --> K
+    A --> M
     D --> H
     E --> I
     F --> J
+    E --> K
 ```
 
-## 🔧 Anchor Program Architecture
+## ðŸ”§ Anchor Program Architecture
 
 ### Account Hierarchy
 
@@ -76,7 +82,91 @@ sequenceDiagram
     Program->>Client: Performance recorded
 ```
 
-## 📊 Data Architecture
+## ðŸ§  Session Storage & On-chain Emotion History
+
+### High-level Flow
+
+```mermaid
+sequenceDiagram
+    participant UI as Client UI
+    participant IPFS as IPFS/Filecoin
+    participant Memo as Memo Program
+    participant Prog as Anchor Program
+    participant Chain as Solana Blockchain
+    
+    UI->>IPFS: Upload session.json (VAD history, features)
+    IPFS-->>UI: Return CID
+    UI->>Memo: Write memo with CID
+    Memo->>Chain: Confirm memo transaction
+    UI->>Prog: update_emotional_state(v,a,d, confidence)
+    Prog->>Chain: Append to EmotionalMetadata trajectory
+    UI->>Prog: fetch_recent_history(account)
+    Prog-->>UI: Return latest VAD points
+```
+
+### Session Package Schema (off-chain)
+- `version`  
+- `model` and `model_version`  
+- `start`, `end`, `duration_ms`  
+- `emotion_history`: array of `{v,a,d,timestamp}`  
+- `sensor_features`: summarized metrics (no raw video/audio by default)  
+- `events`: timestamped entries for MediaPipe/LeapMotion/mic levels  
+- `confidence_distribution` and `notes`
+
+### Program Client References
+- Initialize NFT with emotion: `src/utils/solana-client.ts:149â€“181`
+- Update emotion instruction: `src/utils/solana-client.ts:209â€“234`
+- Fetch account and owner NFTs: `src/utils/solana-client.ts:236â€“266`
+- Memo transactions: `src/utils/solana-client.ts:304â€“324`
+
+### Owner NFTs UI Flow
+
+```mermaid
+sequenceDiagram
+    participant UI as Client UI
+    participant Prog as Anchor Program
+    participant Explorer as Explorer
+    
+    UI->>Prog: getNFTsByOwner(owner)
+    Prog-->>UI: Return list (accounts, quality, last emotion)
+    UI->>UI: Sort by quality / refresh list
+    UI->>Prog: update_emotional_state(item, v,a,d)
+    Prog-->>UI: Confirm update
+    UI->>Explorer: Open account/tx links
+```
+
+### Client Integration Flow
+
+```mermaid
+sequenceDiagram
+    participant UI as Client UI
+    participant Wallet as Wallet Adapter
+    participant Airdrop as Airdrop Service
+    participant Prog as Anchor Program
+    participant Explorer as Explorer
+    
+    UI->>Wallet: Connect Phantom/Solflare
+    Wallet-->>UI: Public key & balance
+    UI->>Airdrop: Request devnet SOL (optional)
+    Airdrop-->>UI: Confirm airdrop
+    UI->>Prog: initialize_nft(v,a,d,confidence)
+    Prog-->>UI: Account created, tx signature
+    UI->>Explorer: Open tx/signature link
+```
+
+### Memo Anchoring & Storage
+
+```mermaid
+graph TD
+    UI["Client UI"] --> IPFS["Upload session.json\nIPFS/Filecoin"]
+    IPFS --> CID["CID Returned"]
+    UI --> MEMO["Write Memo\nCID Anchor"]
+    MEMO --> CHAIN["Solana Blockchain"]
+    UI --> PROG["Anchor Program\nupdate_emotional_state"]
+    PROG --> META["EmotionalMetadata\nTrajectory Update"]
+```
+
+## ðŸ“Š Data Architecture
 
 ### Account Storage Layout
 
@@ -158,7 +248,7 @@ pub fn compress_emotional_data(data: &EmotionalTrajectory) -> Vec<u8> {
 
 **Compression Ratio**: ~10:1 for typical emotional trajectories
 
-## 🚀 Stream Diffusion Integration
+## ðŸš€ Stream Diffusion Integration
 
 ### StreamSession Architecture
 
@@ -213,16 +303,16 @@ graph TD
     I --> J[Stream Diffusion Engine]
 ```
 
-## 🔒 Security Architecture
+## ðŸ”’ Security Architecture
 
 ### Access Control Matrix
 
 | Account Type | Create | Update | Delete | View |
 |-------------|--------|----------|---------|-------|
-| CreativeSession | Owner | Owner | ❌ | Public |
-| EmotionalMetadata | Owner | Owner | ❌ | Public |
-| StreamDiffusionMetrics | Owner | Owner | ❌ | Public |
-| CrossChainMetadata | Owner | Owner | ❌ | Public |
+| CreativeSession | Owner | Owner | âŒ | Public |
+| EmotionalMetadata | Owner | Owner | âŒ | Public |
+| StreamDiffusionMetrics | Owner | Owner | âŒ | Public |
+| CrossChainMetadata | Owner | Owner | âŒ | Public |
 
 ### Validation Layers
 
@@ -243,7 +333,7 @@ pub fn check_update_cooldown(last_update: i64, current_time: i64) -> Result<()> 
 }
 ```
 
-## 📈 Performance Optimization
+## ðŸ“ˆ Performance Optimization
 
 ### Transaction Batch Processing
 
@@ -272,7 +362,7 @@ graph TD
 | EmotionalMetadata | 256 bytes | 0.0018 SOL | 10:1 |
 | StreamDiffusionMetrics | 1 KB | 0.007 SOL | 3:1 |
 
-## 🌉 Cross-chain Bridge Architecture
+## ðŸŒ‰ Cross-chain Bridge Architecture
 
 ### Metadata Bridge Design
 
@@ -305,7 +395,7 @@ pub struct CrossChainMessage {
 }
 ```
 
-## 📊 Monitoring and Analytics
+## ðŸ“Š Monitoring and Analytics
 
 ### Key Performance Indicators
 
@@ -332,7 +422,7 @@ graph LR
 - **Compression Ratio**: < 5:1
 - **Stream Quality**: < 0.7 average score
 
-## 🔗 Development Resources
+## ðŸ”— Development Resources
 
 ### Program Deployment
 
@@ -390,3 +480,4 @@ npm run test:load:solana
 - [Anchor Framework](https://project-serum.github.io/anchor/)
 - [Solana Program Library](https://spl.solana.com/)
 - [Stream Diffusion Protocol](https://streamdiffusion.org/)
+
