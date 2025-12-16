@@ -1,13 +1,13 @@
-﻿# Solana Emotional Metadata
+# Solana Emotional Metadata
 
-## ðŸŽ¯ Project Overview
+## 🎯 Project Overview
 
 **Solana Emotional Metadata** is an Anchor-based program that stores creative session data and emotional metadata on the Solana blockchain, with integrated Stream Diffusion performance tracking.
 
-**Implementation Status**: âœ… Anchor program with emotional data accounts deployed  
+**Implementation Status**: ✅ Anchor program with emotional data accounts deployed  
 **Current State**: On-chain storage for compressed emotional/performance metadata with stream diffusion metrics
 
-## ðŸ—ï¸ Technical Architecture
+## 🏗️ Technical Architecture
 
 ### Core Components
 
@@ -47,7 +47,7 @@ graph LR
     K --> N[prompt_modulation: PromptModulation]
 ```
 
-## ðŸ”§ Implementation Details
+## 🔧 Implementation Details
 
 ### Anchor Program Accounts (src/solana-client/src/lib.rs:31-177)
 
@@ -96,7 +96,7 @@ pub struct EmotionalState {
 - Maintains data integrity through hashing
 - Enables efficient retrieval of compressed states
 
-## ðŸ§  Session Storage & On-chain History
+## 🧠 Session Storage & On-chain History
 
 Emotion-first design: latest VAD vector is stored on-chain with trajectory updates, while full creative session logs (JSON) are persisted to IPFS/Filecoin and anchored to Solana via the Memo program.
 
@@ -125,12 +125,12 @@ sequenceDiagram
 - `confidence_distribution`
 
 ### UI Implementation References
-- Save to IPFS and Download JSON: `src/pages/SolanaEmotionalNFT.tsx:900`, `src/pages/SolanaEmotionalNFT.tsx:927â€“942`
-- Memo anchoring (session CID): `src/pages/SolanaEmotionalNFT.tsx:902â€“921`, `src/pages/SolanaEmotionalNFT.tsx:944â€“964`
-- On-chain emotion update and history preview: `src/pages/SolanaEmotionalNFT.tsx:1012â€“1086`
-- Owner NFT listing and quick actions: `src/pages/SolanaEmotionalNFT.tsx:1074â€“1153`
+- Save to IPFS and Download JSON: `src/pages/SolanaEmotionalNFT.tsx:900`, `src/pages/SolanaEmotionalNFT.tsx:927–942`
+- Memo anchoring (session CID): `src/pages/SolanaEmotionalNFT.tsx:902–921`, `src/pages/SolanaEmotionalNFT.tsx:944–964`
+- On-chain emotion update and history preview: `src/pages/SolanaEmotionalNFT.tsx:1012–1086`
+- Owner NFT listing and quick actions: `src/pages/SolanaEmotionalNFT.tsx:1074–1153`
 
-## ðŸš€ Key Features
+## 🚀 Key Features
 ### Stream Diffusion Integration (src/solana-client/src/stream_diffusion.rs)
 
 **StreamSession Account**:
@@ -152,26 +152,26 @@ pub struct StreamSession {
 - Prompt effectiveness measurement
 - Emotional state correlation analysis
 
-## ðŸš€ Key Features
+## 🚀 Key Features
 
-### âœ… Implemented
+### ✅ Implemented
 - **Anchor Program Accounts** - Creative session and emotional metadata storage
 - **Performance Data Recording** - On-chain reputation and complexity tracking
 - **State Compression** - Efficient storage for historical emotional data
 - **Stream Diffusion Metrics** - Generation performance and quality tracking
 - **Cross-chain Metadata** - Bridge information for other blockchains
 
-### âš ï¸ Partially Implemented
+### ⚠️ Partially Implemented
 - **Emotional Trajectory Compression** - Basic compression implemented, advanced algorithms pending
 - **Prompt Modulation** - Framework ready, real-time modulation pending
 - **Quality Score Aggregation** - Basic averaging, advanced metrics pending
 
-### âŒ Not Implemented
+### ❌ Not Implemented
 - **Real-time Stream Processing** - Currently batch-based only
 - **Advanced Emotional AI** - Simple calculations, no ML models
 - **Production Deployment** - Devnet only, mainnet deployment pending
 
-## ðŸ“Š Performance Metrics
+## 📊 Performance Metrics
 
 ### Account Storage Requirements
 - **CreativeSession**: ~512 bytes
@@ -190,7 +190,7 @@ pub struct StreamSession {
 - **Max Updates per Second**: ~50
 - **State Compression Rate**: ~10:1 ratio
 
-## ðŸ§ª Testing
+## 🧪 Testing
 
 ### Unit Tests
 ```bash
@@ -209,7 +209,7 @@ npm run test:solana
 - **State Compression**: 85%
 - **Stream Diffusion**: 80%
 
-## ðŸ”’ Security Considerations
+## 🔒 Security Considerations
 
 ### Account Validation
 - Owner pubkey verification on all operations
@@ -226,7 +226,7 @@ npm run test:solana
 - Performance metrics validated for consistency
 - Compressed data verified through checksums
 
-## ðŸŒ‰ Cross-chain Integration
+## 🌉 Cross-chain Integration
 
 ### Supported Metadata Formats
 - **NEAR**: JSON-based emotional metadata
@@ -246,25 +246,25 @@ graph TD
     H --> I[Metadata Replication]
 ```
 
-## ðŸ“ˆ Roadmap
+## 📈 Roadmap
 
 ### Phase 1 (Completed)
-- âœ… Anchor program structure
-- âœ… Creative session accounts
-- âœ… Emotional metadata storage
-- âœ… Stream diffusion integration
+- ✅ Anchor program structure
+- ✅ Creative session accounts
+- ✅ Emotional metadata storage
+- ✅ Stream diffusion integration
 
 ### Phase 2 (In Progress)
-- ðŸ”„ Advanced compression algorithms
-- ðŸ”„ Real-time stream processing
-- ðŸ”„ Machine learning integration
+- 🔄 Advanced compression algorithms
+- 🔄 Real-time stream processing
+- 🔄 Machine learning integration
 
 ### Phase 3 (Planned)
-- ðŸ”® Mainnet deployment
-- ðŸ”® Cross-chain bridge implementation
-- ðŸ”® Advanced emotional AI models
+- 🔮 Mainnet deployment
+- 🔮 Cross-chain bridge implementation
+- 🔮 Advanced emotional AI models
 
-## ðŸ”— Resources
+## 🔗 Resources
 
 ### Program Deployment
 - **Program ID**: `EmotionalMetadata111111111111111111111111`
@@ -279,4 +279,3 @@ graph TD
 - [Technical Architecture](TECHNICAL_ARCHITECTURE.md)
 - [Implementation Report](IMPLEMENTATION_REPORT.md)
 - [Anchor Documentation](https://project-serum.github.io/anchor/)
-

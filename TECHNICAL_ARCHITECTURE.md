@@ -1,6 +1,6 @@
-﻿# Solana Emotional Metadata - Technical Architecture
+# Solana Emotional Metadata - Technical Architecture
 
-## ðŸ—ï¸ System Overview
+## 🏗️ System Overview
 
 The Solana Emotional Metadata system uses Anchor framework to create on-chain accounts for storing creative session data, emotional states, and performance metrics with integrated Stream Diffusion tracking.
 
@@ -39,7 +39,7 @@ graph TB
     E --> K
 ```
 
-## ðŸ”§ Anchor Program Architecture
+## 🔧 Anchor Program Architecture
 
 ### Account Hierarchy
 
@@ -82,7 +82,7 @@ sequenceDiagram
     Program->>Client: Performance recorded
 ```
 
-## ðŸ§  Session Storage & On-chain Emotion History
+## 🧠 Session Storage & On-chain Emotion History
 
 ### High-level Flow
 
@@ -114,10 +114,10 @@ sequenceDiagram
 - `confidence_distribution` and `notes`
 
 ### Program Client References
-- Initialize NFT with emotion: `src/utils/solana-client.ts:149â€“181`
-- Update emotion instruction: `src/utils/solana-client.ts:209â€“234`
-- Fetch account and owner NFTs: `src/utils/solana-client.ts:236â€“266`
-- Memo transactions: `src/utils/solana-client.ts:304â€“324`
+- Initialize NFT with emotion: `src/utils/solana-client.ts:149–181`
+- Update emotion instruction: `src/utils/solana-client.ts:209–234`
+- Fetch account and owner NFTs: `src/utils/solana-client.ts:236–266`
+- Memo transactions: `src/utils/solana-client.ts:304–324`
 
 ### Owner NFTs UI Flow
 
@@ -166,7 +166,7 @@ graph TD
     PROG --> META["EmotionalMetadata\nTrajectory Update"]
 ```
 
-## ðŸ“Š Data Architecture
+## 📊 Data Architecture
 
 ### Account Storage Layout
 
@@ -248,7 +248,7 @@ pub fn compress_emotional_data(data: &EmotionalTrajectory) -> Vec<u8> {
 
 **Compression Ratio**: ~10:1 for typical emotional trajectories
 
-## ðŸš€ Stream Diffusion Integration
+## 🚀 Stream Diffusion Integration
 
 ### StreamSession Architecture
 
@@ -303,16 +303,16 @@ graph TD
     I --> J[Stream Diffusion Engine]
 ```
 
-## ðŸ”’ Security Architecture
+## 🔒 Security Architecture
 
 ### Access Control Matrix
 
 | Account Type | Create | Update | Delete | View |
 |-------------|--------|----------|---------|-------|
-| CreativeSession | Owner | Owner | âŒ | Public |
-| EmotionalMetadata | Owner | Owner | âŒ | Public |
-| StreamDiffusionMetrics | Owner | Owner | âŒ | Public |
-| CrossChainMetadata | Owner | Owner | âŒ | Public |
+| CreativeSession | Owner | Owner | ❌ | Public |
+| EmotionalMetadata | Owner | Owner | ❌ | Public |
+| StreamDiffusionMetrics | Owner | Owner | ❌ | Public |
+| CrossChainMetadata | Owner | Owner | ❌ | Public |
 
 ### Validation Layers
 
@@ -333,7 +333,7 @@ pub fn check_update_cooldown(last_update: i64, current_time: i64) -> Result<()> 
 }
 ```
 
-## ðŸ“ˆ Performance Optimization
+## 📈 Performance Optimization
 
 ### Transaction Batch Processing
 
@@ -362,7 +362,7 @@ graph TD
 | EmotionalMetadata | 256 bytes | 0.0018 SOL | 10:1 |
 | StreamDiffusionMetrics | 1 KB | 0.007 SOL | 3:1 |
 
-## ðŸŒ‰ Cross-chain Bridge Architecture
+## 🌉 Cross-chain Bridge Architecture
 
 ### Metadata Bridge Design
 
@@ -395,7 +395,7 @@ pub struct CrossChainMessage {
 }
 ```
 
-## ðŸ“Š Monitoring and Analytics
+## 📊 Monitoring and Analytics
 
 ### Key Performance Indicators
 
@@ -422,7 +422,7 @@ graph LR
 - **Compression Ratio**: < 5:1
 - **Stream Quality**: < 0.7 average score
 
-## ðŸ”— Development Resources
+## 🔗 Development Resources
 
 ### Program Deployment
 
@@ -480,4 +480,3 @@ npm run test:load:solana
 - [Anchor Framework](https://project-serum.github.io/anchor/)
 - [Solana Program Library](https://spl.solana.com/)
 - [Stream Diffusion Protocol](https://streamdiffusion.org/)
-
