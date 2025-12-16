@@ -816,9 +816,14 @@ const SolanaEmotionalNFT: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-900 text-white p-6">
+    <div className="min-h-screen bg-gradient-to-br from-violet-900 via-indigo-900 to-purple-900 text-white p-6">
       <div className="max-w-6xl mx-auto">
-        <h1 className="text-4xl font-bold mb-4 text-center">Solana Emotional NFT Studio</h1>
+        <h1 className="text-4xl font-bold mb-2 text-center">Solana Emotional NFT Studio</h1>
+        <div className="flex justify-center mb-6">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-black/40 border border-violet-500/40 text-violet-200 text-sm">
+            <span>Solana Program-backed Mint</span>
+          </div>
+        </div>
         <div className="flex flex-col md:flex-row items-center justify-center gap-4 mb-6">
           <div className="bg-gray-800 border border-gray-700 rounded-lg px-4 py-2 text-sm">
             {wallet.connected ? 'Wallet Connected' : 'Wallet Disconnected'}
